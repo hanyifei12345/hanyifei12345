@@ -1,0 +1,126 @@
+#include <YSI_Coding\y_hooks>
+
+#include <sampvoice>
+
+new SV_GSTREAM:OnPhone[MAX_PLAYERS];
+
+ResetPlayerPhone(playerid){
+	if (OnPhone[playerid]) SvDetachSpeakerFromStream(OnPhone[playerid], playerid);
+	return 1;
+}
+
+hook OnPlayerConnect(playerid)
+{
+    ResetPlayerPhone(playerid);
+}
+
+alias:answer("รับสาย")
+CMD:answer(playerid, params[])
+{
+	if (!playerData[playerid][pIncomingCall])
+	    return SendClientMessage(playerid, COLOR_RED, "[Ãкº] {FFFFFF}äÁèÁÕÊÒÂàÃÕ¡à¢éÒ");
+
+	if (playerData[playerid][pCuffed])
+	    return SendClientMessage(playerid, COLOR_RED, "[Ãкº] {FFFFFF}¤سäÁèÊÒÁÒöãªéÁ×Ͷ×Íä´é㹢³йÕé");
+
+    if (playerData[playerid][pPhoneOff])
+    	return SendClientMessage(playerid, COLOR_RED, "[Ãкº] {FFFFFF}¤س¨Óà»繵éͧà»Դà¤Ã×èͧ¡è͹");
+
+	new targetid = playerData[playerid][pCallLine];
+
+	playerData[playerid][pIncomingCall] = 0;
+	playerData[targetid][pIncomingCall] = 0;
+
+	SendClientMessage(playerid, COLOR_YELLOW, "[SERVER]:{FFFFFF} ¤سä´éÃѺÊÒÂáÅéÇ");
+	SendClientMessage(targetid, COLOR_YELLOW, "[SERVER]:{FFFFFF} ÊÒ·Õè¤سâ·ö١ÃѺáÅéÇ");
+
+	SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s ä´éÃѺÊÒÂàÃÕ¡à¢éÒ", GetPlayerNameEx(playerid));
+
+	OnPhone[targetid] = SvCreateGStream(0xFFA200FF, "InPhone");
+
+    if (OnPhone[targetid]) {
+        SvAttachListenerToStream(OnPhone[targetid], targetid);
+        SvAttachListenerToStream(OnPhone[targetid], playerid);
+    }
+    if (OnPhone[targetid] && playerData[playerid][pCallLine] != INVALID_PLAYER_ID) {
+        SvAttachSpeakerToStream(OnPhone[targetid], playerid);
+    }
+
+    if(OnPhone[targetid] && playerData[targetid][pCallLine] != INVALID_PLAYER_ID){
+        SvAttachSpeakerToStream(OnPhone[targetid], targetid);
+    }
+	return 1;
+}
+
+alias:hangup("วางสาย")
+CMD:hangup(playerid, const params[])
+{
+	new targetid = playerData[playerid][pCallLine];
+
+	if (playerData[playerid][pEmergency])
+	{
+	    playerData[playerid][pEmergency] = 0;
+//	    playerData[playerid][pPlaceAd] = 0;
+
+        SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s ä´éÇҧÊÒÂ", GetPlayerNameEx(playerid));
+        return 1;
+	}
+	if (targetid == INVALID_PLAYER_ID)
+	    return SendClientMessage(playerid, COLOR_RED, "[Ãкº] {FFFFFF}äÁèÁÕÊÒÂãËéÇҧ");
+
+	if (playerData[playerid][pIncomingCall])
+	{
+	    SendClientMessage(playerid, COLOR_YELLOW, "[Á×Ͷ×Í]:{FFFFFF} ¤سä´éµѴÊÒÂàÃÕ¡à¢éÒ");
+	    SendClientMessage(targetid, COLOR_YELLOW, "[Á×Ͷ×Í]:{FFFFFF} ¤س¶١µѴÊÒ¡ÒÃâ·Ã");
+
+		SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s ä´éµѴÊÒÂàÃÕ¡à¢éÒ", GetPlayerNameEx(playerid));
+	}
+	else
+	{
+        SendClientMessage(playerid, COLOR_YELLOW, "[Á×Ͷ×Í]:{FFFFFF} ¤سÇҧÊÒÂáÅéÇ");
+	    SendClientMessage(targetid, COLOR_YELLOW, "[Á×Ͷ×Í]:{FFFFFF} ¤س¶١ÇҧÊÒÂáÅéÇ");
+
+	    SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s ÇҧÊÒÂÁ×Ͷ×ÍáÅéÇ", GetPlayerNameEx(playerid));
+	    SendNearbyMessage(targetid, 30.0, COLOR_PURPLE, "** %s ÇҧÊÒÂÁ×Ͷ×ÍáÅéÇ", GetPlayerNameEx(targetid));
+
+
+	    if (OnPhone[targetid] && playerData[targetid][pCallLine] != INVALID_PLAYER_ID) {
+            SvDetachSpeakerFromStream(OnPhone[targetid], targetid);
+        }
+
+        if(OnPhone[targetid] && playerData[playerid][pCallLine] != INVALID_PLAYER_ID){
+            SvDetachSpeakerFromStream(OnPhone[targetid], playerid);
+        }
+
+        if(OnPhone[targetid]){
+            SvDetachListenerFromStream(OnPhone[targetid], targetid);
+            SvDetachListenerFromStream(OnPhone[targetid], playerid);
+            SvDeleteStream(OnPhone[targetid]);
+            OnPhone[targetid] = SV_NULL;
+        }
+
+        if (OnPhone[playerid] && playerData[targetid][pCallLine] != INVALID_PLAYER_ID) {
+            SvDetachSpeakerFromStream(OnPhone[playerid], targetid);
+        }
+
+        if(OnPhone[playerid] && playerData[playerid][pCallLine] != INVALID_PLAYER_ID){
+            SvDetachSpeakerFromStream(OnPhone[playerid], playerid);
+        }
+
+        if(OnPhone[playerid]){
+            SvDetachListenerFromStream(OnPhone[playerid], targetid);
+            SvDetachListenerFromStream(OnPhone[playerid], playerid);
+            SvDeleteStream(OnPhone[playerid]);
+            OnPhone[playerid] = SV_NULL;
+        }
+
+	}
+	playerData[playerid][pIncomingCall] = 0;
+	playerData[targetid][pIncomingCall] = 0;
+
+	playerData[playerid][pCallLine] = INVALID_PLAYER_ID;
+	playerData[targetid][pCallLine] = INVALID_PLAYER_ID;
+
+	return 1;
+}
+
